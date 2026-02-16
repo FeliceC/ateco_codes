@@ -1,6 +1,6 @@
 {
   "name": "ateco-codes-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ATECO 2025 Codes API with Profitability Coefficients - Deployed on GitHub Pages",
   "main": "api.js",
   "scripts": {
@@ -23,9 +23,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FeliceC/ateco-codes.git"
+    "url": "https://github.com/FeliceC/ateco_codes.git"
   },
-  "homepage": "https://FeliceC.github.io/ateco-codes",
+  "homepage": "https://FeliceC.github.io/ateco_codes",
   "jest": {
     "testEnvironment": "node",
     "collectCoverageFrom": [
