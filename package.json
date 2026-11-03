@@ -19,7 +19,7 @@
     "jest": "^29.7.0"
   },
   "keywords": ["ateco", "api", "italy", "business", "profitability", "github-pages"],
-  "author": "ATECO API",
+  "author": "Felice Caricati",
   "license": "MIT",
   "repository": {
     "type": "git",

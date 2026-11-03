@@ -88,4 +88,4 @@ Push to `main` triggers GitHub Actions which:
 
 ## License
 
-ATECO codes are public data from ISTAT. Code is licensed under MIT.
+ATECO codes are public data from ISTAT. Code is licensed under [MIT](LICENSE).
