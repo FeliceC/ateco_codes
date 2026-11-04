@@ -1,6 +1,6 @@
 {
   "name": "ateco-codes-api",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "ATECO 2025 Codes API with Profitability Coefficients - Deployed on GitHub Pages",
   "main": "api.js",
   "scripts": {
