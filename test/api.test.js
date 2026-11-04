@@ -65,6 +65,12 @@ describe('ATECO API Tests', () => {
             expect(results[0].code).toContain('01');
         });
 
+        test('should match codes by prefix only', () => {
+            const codes = api.searchByText(atecoData, '62.20').map(item => item.code);
+            expect(codes).toContain('62.20.10');
+            expect(codes).not.toContain('47.62.20');
+        });
+
         test('should return empty array for no matches', () => {
             const results = api.searchByText(atecoData, 'xyz123', 'it');
             expect(results).toEqual([]);

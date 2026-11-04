@@ -14,7 +14,7 @@ function searchByText(atecoData, query, language = 'it') {
     const titleField = language === 'en' ? 'title_en' : 'title_it';
 
     return atecoData.ateco_codes.filter(item =>
-        item.code.toLowerCase().includes(searchTerm) ||
+        item.code.toLowerCase().startsWith(searchTerm) ||
         item[titleField].toLowerCase().includes(searchTerm)
     );
 }

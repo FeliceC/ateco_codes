@@ -284,6 +284,8 @@
         const AMBIGUOUS_FILTER = 'ambiguous';
         const ALL_FILTER = 'all';
         const THEME_STORAGE_KEY = 'theme';
+        // VAT registration needs the 6-digit subcategory; upper levels repeat its title when they have a single child
+        const SUBCATEGORY_HIERARCHY = 6;
         const ACTIVITY_BY_COEFFICIENT = {
             0.4: 'commercio, industria alimentare, alloggio e ristorazione',
             0.54: 'commercio ambulante non alimentare',
@@ -299,6 +301,7 @@
         const filterButtons = document.querySelectorAll('.filters button');
         const percentFormatter = new Intl.NumberFormat('it-IT', { style: 'percent' });
         let atecoData = null;
+        let subcategories = null;
         let codesByCode = new Map();
         let activeFilter = ALL_FILTER;
 
@@ -392,7 +395,7 @@
                 resultList.replaceChildren();
                 return;
             }
-            const source = query ? searchByText(atecoData, query) : atecoData.ateco_codes;
+            const source = query ? searchByText(subcategories, query) : subcategories.ateco_codes;
             const matches = source.filter(matchesActiveFilter);
             const shown = matches.slice(0, MAX_DISPLAYED_RESULTS);
             resultSummary.textContent = describeResultCount(matches.length, shown.length);
@@ -409,6 +412,7 @@
             const response = await fetch('./ateco_codes_with_profitability.json');
             atecoData = await response.json();
             codesByCode = new Map(atecoData.ateco_codes.map(item => [item.code, item]));
+            subcategories = { ateco_codes: atecoData.ateco_codes.filter(item => item.hierarchy === SUBCATEGORY_HIERARCHY) };
             document.getElementById('totalCodes').textContent = atecoData.ateco_codes.length.toLocaleString('it-IT');
             renderResults();
         }
