@@ -1,35 +1,22 @@
-const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-
-// Import the API functions
 const api = require('../api.js');
+const { profitabilityGroupFor, ProfitabilityGroup } = require('../generate-data.js');
 
-// Test data setup
-let atecoData = null;
-
-beforeAll(() => {
-    // Load test data
-    atecoData = api.loadAtecoData();
-    if (!atecoData) {
-        throw new Error('Failed to load ATECO data');
-    }
-});
+const atecoData = require('../ateco_codes_with_profitability.json');
 
 describe('ATECO API Tests', () => {
     
-    describe('loadAtecoData', () => {
+    describe('dataset', () => {
         test('should load ATECO data successfully', () => {
             expect(atecoData).toBeDefined();
             expect(atecoData.metadata).toBeDefined();
             expect(atecoData.ateco_codes).toBeDefined();
-            expect(atecoData.ateco_codes.length).toBe(2723);
+            expect(atecoData.ateco_codes.length).toBe(3257);
         });
 
         test('should have correct metadata', () => {
             expect(atecoData.metadata.description).toContain('ATECO 2025');
-            expect(atecoData.metadata.total_codes).toBe(2723);
-            expect(atecoData.metadata.codes_with_profitability).toBe(2597);
+            expect(atecoData.metadata.total_codes).toBe(3257);
+            expect(atecoData.metadata.codes_with_profitability).toBe(2791);
         });
     });
 
@@ -115,16 +102,16 @@ describe('ATECO API Tests', () => {
 
         test('should handle full range', () => {
             const results = api.filterByProfitability(atecoData, 0.0, 1.0);
-            expect(results.length).toBe(2597); // All codes with profitability data
+            expect(results.length).toBe(2791); // All codes with profitability data
         });
     });
 
     describe('getStatistics', () => {
         test('should return correct statistics', () => {
             const stats = api.getStatistics(atecoData);
-            expect(stats.total_codes).toBe(2723);
-            expect(stats.codes_with_profitability).toBe(2597);
-            expect(stats.coverage_percentage).toBe('95.37'); // Valore corretto calcolato
+            expect(stats.total_codes).toBe(3257);
+            expect(stats.codes_with_profitability).toBe(2791);
+            expect(stats.coverage_percentage).toBe('85.69');
         });
 
         test('should have profitability ranges', () => {
@@ -145,7 +132,7 @@ describe('ATECO API Tests', () => {
 
         test('should calculate correct coverage percentage', () => {
             const stats = api.getStatistics(atecoData);
-            const expectedCoverage = (2597 / 2723 * 100).toFixed(2);
+            const expectedCoverage = (2791 / 3257 * 100).toFixed(2);
             expect(stats.coverage_percentage).toBe(expectedCoverage);
         });
     });
@@ -196,126 +183,25 @@ describe('ATECO API Tests', () => {
     });
 });
 
-describe('API Handler Tests', () => {
-    test('should handle OPTIONS request for CORS', async () => {
-        const mockEvent = {
-            httpMethod: 'OPTIONS',
-            path: '/api',
-            queryStringParameters: null
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
-        expect(result.headers['Access-Control-Allow-Methods']).toContain('GET');
+describe('Profitability mapping (Allegato 4, L. 190/2014)', () => {
+    test('maps ATECO 2022 codes to their legal group', () => {
+        expect(profitabilityGroupFor('10.11.00')).toBe(ProfitabilityGroup.FOOD_INDUSTRY);
+        expect(profitabilityGroupFor('46.11.01')).toBe(ProfitabilityGroup.TRADE_INTERMEDIARIES);
+        expect(profitabilityGroupFor('46.21.10')).toBe(ProfitabilityGroup.WHOLESALE_RETAIL);
+        expect(profitabilityGroupFor('47.81.01')).toBe(ProfitabilityGroup.STREET_TRADE_FOOD);
+        expect(profitabilityGroupFor('47.89.09')).toBe(ProfitabilityGroup.STREET_TRADE_OTHER);
+        expect(profitabilityGroupFor('68.20.01')).toBe(ProfitabilityGroup.CONSTRUCTION_REAL_ESTATE);
+        expect(profitabilityGroupFor('62.01.00')).toBe(ProfitabilityGroup.OTHER_ACTIVITIES);
+        expect(profitabilityGroupFor('69.10.10')).toBe(ProfitabilityGroup.PROFESSIONAL_SERVICES);
     });
 
-    test('should handle GET /api/stats', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api/stats',
-            queryStringParameters: null
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        expect(result.headers['Content-Type']).toBe('application/json');
-        
-        const body = JSON.parse(result.body);
-        expect(body.total_codes).toBe(2723);
-        expect(body.codes_with_profitability).toBe(2597);
+    test('ambiguous ATECO 2025 codes expose candidates instead of a coefficient', () => {
+        const item = api.searchByCode(atecoData, '46.11.01');
+        expect(item.profitability_coefficient).toBeNull();
+        expect(item.profitability_candidates).toEqual([0.62, 0.67]);
     });
 
-    test('should handle GET /api/code/{code}', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api/code/01.1',
-            queryStringParameters: null
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        
-        const body = JSON.parse(result.body);
-        expect(body.code).toBe('01.1');
-        expect(body.title_it).toContain('Coltivazione di colture agricole non permanenti');
-    });
-
-    test('should return 404 for non-existent code', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api/code/99.99.99',
-            queryStringParameters: null
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(404);
-        
-        const body = JSON.parse(result.body);
-        expect(body.error).toBe('ATECO code not found');
-    });
-
-    test('should handle GET /api/search', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api/search',
-            queryStringParameters: { q: 'agricoltura', lang: 'it' }
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        
-        const body = JSON.parse(result.body);
-        expect(body.data).toBeDefined();
-        expect(body.total).toBeGreaterThan(0);
-        expect(body.data.length).toBeGreaterThan(0);
-        expect(body.data[0].title_it.toLowerCase()).toContain('agricoltura');
-    });
-
-    test('should handle profitability filtering', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api',
-            queryStringParameters: { profitability_min: '0.60' }
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        
-        const body = JSON.parse(result.body);
-        expect(body.data).toBeDefined();
-        body.data.forEach(item => {
-            expect(item.profitability_coefficient).toBeGreaterThanOrEqual(0.60);
-        });
-    });
-
-    test('should handle pagination', async () => {
-        const mockEvent = {
-            httpMethod: 'GET',
-            path: '/api',
-            queryStringParameters: { limit: '10', offset: '0' }
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(200);
-        
-        const body = JSON.parse(result.body);
-        expect(body.data.length).toBeLessThanOrEqual(10);
-        expect(body.limit).toBe(10);
-        expect(body.offset).toBe(0);
-    });
-
-    test('should reject unsupported methods', async () => {
-        const mockEvent = {
-            httpMethod: 'POST',
-            path: '/api',
-            queryStringParameters: null
-        };
-        
-        const result = await api.handler(mockEvent);
-        expect(result.statusCode).toBe(405);
-        
-        const body = JSON.parse(result.body);
-        expect(body.error).toBe('Method not allowed');
+    test('codes with apostrophes in titles are present', () => {
+        expect(api.searchByCode(atecoData, '01.5').title_it).toContain("all'allevamento");
     });
 });

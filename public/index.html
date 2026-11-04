@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codici ATECO 2025</title>
+    <meta name="description" content="Codici ATECO 2025 ufficiali ISTAT con il coefficiente di redditività del regime forfettario. Ricerca e API JSON gratuite.">
+    <style>
+        :root {
+            color-scheme: light dark;
+            --background: light-dark(#f6f7f9, #16181d);
+            --surface: light-dark(#ffffff, #1c1f25);
+            --surface-sunken: light-dark(#eef0f3, #111317);
+            --input: light-dark(#ffffff, #1f2229);
+            --border: light-dark(#e1e4e9, #2a2e36);
+            --border-strong: light-dark(#c9ced6, #3a3f4a);
+            --text-strong: light-dark(#14171c, #eef0f3);
+            --text: light-dark(#2b3038, #d7dae0);
+            --text-muted: light-dark(#5d6573, #8b93a1);
+            --text-faint: light-dark(#6b7280, #7a8291);
+            --accent: light-dark(#0f766e, #7dd3c0);
+            --accent-soft: light-dark(#dff3ef, #183a33);
+            --warning: light-dark(#9a5b00, #f0c27a);
+            --warning-text: light-dark(#8a5a12, #c9a96a);
+            --warning-soft: light-dark(#fbeed6, #3a2f17);
+        }
+        :root[data-theme="light"] { color-scheme: light; }
+        :root[data-theme="dark"] { color-scheme: dark; }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .brand { font-weight: 600; color: var(--text-strong); }
+        .topbar nav { display: flex; gap: 16px; align-items: center; }
+        .topbar nav a { color: var(--text-muted); }
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            padding: 3px 9px;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        main, .api { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+        .hero { padding: 48px 0 8px; }
+        .eyebrow {
+            font-size: 12px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--text-faint);
+        }
+        h1 {
+            font-size: clamp(28px, 6vw, 36px);
+            line-height: 1.15;
+            font-weight: 600;
+            letter-spacing: -.01em;
+            color: var(--text-strong);
+            margin: 8px 0 6px;
+        }
+        .lead { color: var(--text-muted); margin: 0 0 22px; }
+
+        .search { position: relative; }
+        .search input {
+            width: 100%;
+            background: var(--input);
+            border: 1px solid var(--border-strong);
+            border-radius: 12px;
+            padding: 15px 48px 15px 16px;
+            font: inherit;
+            font-size: 16px;
+            color: var(--text-strong);
+        }
+        .search input::placeholder { color: var(--text-faint); }
+        .search kbd {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font: 11px ui-monospace, Menlo, monospace;
+            color: var(--text-faint);
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            padding: 1px 6px;
+        }
+
+        .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .filters button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 99px;
+            padding: 4px 12px;
+            font: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .filters button[aria-pressed="true"] {
+            background: var(--accent-soft);
+            border-color: transparent;
+            color: var(--accent);
+        }
+        .filters button[data-filter="ambiguous"] { color: var(--warning); }
+        .filters button[data-filter="ambiguous"][aria-pressed="true"] { background: var(--warning-soft); }
+
+        .result-summary { font-size: 13px; color: var(--text-faint); margin: 20px 0 8px; min-height: 20px; }
+        .results { list-style: none; margin: 0 0 48px; padding: 0; display: grid; gap: 8px; }
+        .result {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+        .result.is-ambiguous { border-color: var(--warning-soft); }
+        .result-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .result-code { font-size: 14px; color: var(--accent); }
+        .badge {
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--accent-soft);
+            color: var(--accent);
+            padding: 2px 10px;
+            border-radius: 99px;
+            white-space: nowrap;
+        }
+        .is-ambiguous .badge { background: var(--warning-soft); color: var(--warning); }
+        .result-title { color: var(--text-strong); margin-top: 4px; }
+        .result-meta { font-size: 13px; color: var(--text-faint); margin-top: 2px; }
+        .result-note { font-size: 13px; color: var(--warning-text); margin-top: 6px; }
+        .result-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-faint);
+        }
+        .copy {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font: inherit;
+            cursor: pointer;
+            padding: 0;
+            white-space: nowrap;
+        }
+
+        .api { padding-top: 32px; padding-bottom: 48px; border-top: 1px solid var(--border); }
+        h2 { font-size: 22px; font-weight: 600; color: var(--text-strong); margin: 0 0 4px; }
+        h3 { font-size: 16px; font-weight: 600; color: var(--text-strong); margin: 28px 0 8px; }
+        .api p { color: var(--text-muted); margin: 0 0 12px; }
+        .endpoints { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: baseline; margin: 16px 0; }
+        .method { font-size: 11px; color: var(--accent); }
+        .endpoints code { color: var(--text-strong); word-break: break-all; }
+        .endpoints span { color: var(--text-faint); }
+        pre {
+            background: var(--surface-sunken);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        th { color: var(--text-muted); font-weight: 500; }
+        td code { color: var(--text-strong); white-space: nowrap; }
+        .table-scroll { overflow-x: auto; }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 18px 16px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-faint);
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <span class="brand">ATECO 2025</span>
+        <nav>
+            <a href="#cerca">Cerca</a>
+            <a href="#api">API</a>
+            <a href="https://github.com/FeliceC/ateco_codes">GitHub</a>
+            <button class="theme-toggle" type="button" aria-label="Cambia tema chiaro/scuro">◐</button>
+        </nav>
+    </header>
+
+    <main id="cerca">
+        <section class="hero">
+            <div class="eyebrow">Codici ATECO 2025 · regime forfettario</div>
+            <h1>Il tuo codice, il tuo coefficiente.</h1>
+            <p class="lead"><span id="totalCodes">3.257</span> codici ufficiali ISTAT con il coefficiente di redditività previsto dalla L. 190/2014.</p>
+
+            <div class="search">
+                <input id="searchInput" type="search" autocomplete="off" aria-label="Cerca un'attività o un codice ATECO" placeholder="Cerca un'attività o un codice…" aria-describedby="resultSummary">
+                <kbd>/</kbd>
+            </div>
+
+            <div class="filters" role="group" aria-label="Filtra per coefficiente">
+                <button type="button" data-filter="all" aria-pressed="true">Tutti</button>
+                <button type="button" data-filter="0.4" aria-pressed="false">40%</button>
+                <button type="button" data-filter="0.54" aria-pressed="false">54%</button>
+                <button type="button" data-filter="0.62" aria-pressed="false">62%</button>
+                <button type="button" data-filter="0.67" aria-pressed="false">67%</button>
+                <button type="button" data-filter="0.78" aria-pressed="false">78%</button>
+                <button type="button" data-filter="0.86" aria-pressed="false">86%</button>
+                <button type="button" data-filter="ambiguous" aria-pressed="false">Ambigui</button>
+            </div>
+        </section>
+
+        <p class="result-summary" id="resultSummary" aria-live="polite"></p>
+        <ul class="results" id="results"></ul>
+    </main>
+
+    <section class="api" id="api">
+        <h2>API</h2>
+        <p>File JSON statici: gratuiti, senza chiave, con CORS aperto.</p>
+
+        <div class="endpoints">
+            <code class="method">GET</code><div><code>/api/code/{codice}.json</code> <span>— un singolo codice</span></div>
+            <code class="method">GET</code><div><code>/ateco_codes_with_profitability.json</code> <span>— dataset completo con metadati</span></div>
+            <code class="method">GET</code><div><code>/api/stats.json</code> <span>— statistiche del dataset</span></div>
+        </div>
+
+        <pre><code id="curlExample"></code></pre>
+
+        <h3>Campi</h3>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Campo</th><th>Significato</th></tr></thead>
+                <tbody>
+                    <tr><td><code>code</code></td><td>Codice ATECO 2025, dalla sezione (<code>A</code>) alla sottocategoria (<code>01.11.00</code>)</td></tr>
+                    <tr><td><code>title_it</code>, <code>title_en</code></td><td>Titolo ufficiale ISTAT in italiano e inglese</td></tr>
+                    <tr><td><code>hierarchy</code></td><td>Livello nella classificazione, da 1 (sezione) a 6 (sottocategoria)</td></tr>
+                    <tr><td><code>parent_code</code></td><td>Codice del livello superiore, <code>null</code> per le sezioni</td></tr>
+                    <tr><td><code>profitability_coefficient</code></td><td>Coefficiente di redditività, <code>null</code> se ambiguo</td></tr>
+                    <tr><td><code>profitability_candidates</code></td><td>Tutti i coefficienti possibili per il codice</td></tr>
+                    <tr><td><code>profitability_category</code></td><td>Gruppo di settore dell'Allegato 4, <code>null</code> se il codice ne copre più di uno</td></tr>
+                    <tr><td><code>has_profitability_data</code></td><td><code>true</code> se il coefficiente è univoco</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Codici ambigui</h3>
+        <p>I coefficienti di legge sono definiti sui codici ATECO 2007/2022. Alcuni codici 2025 accorpano attività che prima avevano coefficienti diversi, ad esempio vendita in negozio (40%) e ambulante (54%). Per questi codici <code>profitability_coefficient</code> è <code>null</code> e <code>profitability_candidates</code> elenca i valori possibili: quello giusto dipende dall'attività svolta.</p>
+
+        <h3>Download</h3>
+        <p><a href="./ateco_codes_with_profitability.json" download>JSON</a> · <a href="./ateco_codes_with_profitability.sql" download>SQL per PostgreSQL</a></p>
+    </section>
+
+    <footer>
+        Dati <a href="https://www.istat.it/classificazione/ateco-2025/">ISTAT</a> · coefficienti Allegato 4 L. 190/2014 · non è consulenza fiscale · <a href="https://github.com/FeliceC/ateco_codes/blob/main/LICENSE">MIT</a>
+    </footer>
+
+    <script src="./api.js"></script>
+    <script>
+        const MAX_DISPLAYED_RESULTS = 50;
+        const AMBIGUOUS_FILTER = 'ambiguous';
+        const ALL_FILTER = 'all';
+        const THEME_STORAGE_KEY = 'theme';
+        const ACTIVITY_BY_COEFFICIENT = {
+            0.4: 'commercio, industria alimentare, alloggio e ristorazione',
+            0.54: 'commercio ambulante non alimentare',
+            0.62: 'intermediari del commercio',
+            0.67: 'altre attività',
+            0.78: 'attività professionali, finanziarie, sanitarie e di istruzione',
+            0.86: 'costruzioni e immobiliare'
+        };
+
+        const searchInput = document.getElementById('searchInput');
+        const resultList = document.getElementById('results');
+        const resultSummary = document.getElementById('resultSummary');
+        const filterButtons = document.querySelectorAll('.filters button');
+        const percentFormatter = new Intl.NumberFormat('it-IT', { style: 'percent' });
+        let atecoData = null;
+        let codesByCode = new Map();
+        let activeFilter = ALL_FILTER;
+
+        function applyStoredTheme() {
+            try {
+                const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+                if (storedTheme) document.documentElement.dataset.theme = storedTheme;
+            } catch {}
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.dataset.theme
+                ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = nextTheme;
+            try { localStorage.setItem(THEME_STORAGE_KEY, nextTheme); } catch {}
+        }
+
+        function matchesActiveFilter(item) {
+            if (activeFilter === ALL_FILTER) return true;
+            if (activeFilter === AMBIGUOUS_FILTER) return item.profitability_candidates.length > 1;
+            return item.profitability_coefficient === Number(activeFilter);
+        }
+
+        function ancestorPath(item) {
+            const path = [];
+            for (let current = codesByCode.get(item.parent_code); current; current = codesByCode.get(current.parent_code)) {
+                path.unshift(current.code);
+            }
+            return path.join(' › ');
+        }
+
+        function createElement(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        }
+
+        function createCopyButton(code) {
+            const button = createElement('button', 'copy', 'Copia codice');
+            button.type = 'button';
+            button.addEventListener('click', async () => {
+                await navigator.clipboard.writeText(code);
+                button.textContent = 'Copiato';
+                setTimeout(() => { button.textContent = 'Copia codice'; }, 1500);
+            });
+            return button;
+        }
+
+        function renderResult(item) {
+            const isAmbiguous = item.profitability_candidates.length > 1;
+            const card = createElement('li', isAmbiguous ? 'result is-ambiguous' : 'result');
+
+            const head = createElement('div', 'result-head');
+            head.append(
+                createElement('span', 'result-code mono', item.code),
+                createElement('span', 'badge', item.profitability_candidates.map(value => percentFormatter.format(value)).join(' / '))
+            );
+            const categoryLabel = item.profitability_description ? ' · ' + item.profitability_description : '';
+            card.append(
+                head,
+                createElement('div', 'result-title', item.title_it),
+                createElement('div', 'result-meta', item.title_en + categoryLabel)
+            );
+
+            if (isAmbiguous) {
+                const options = item.profitability_candidates
+                    .map(value => `${percentFormatter.format(value)} ${ACTIVITY_BY_COEFFICIENT[value]}`)
+                    .join(', ');
+                card.append(createElement('div', 'result-note', `Dipende dall'attività svolta: ${options}.`));
+            }
+
+            const foot = createElement('div', 'result-foot');
+            foot.append(createElement('span', 'mono', ancestorPath(item)), createCopyButton(item.code));
+            card.append(foot);
+            return card;
+        }
+
+        function describeResultCount(totalCount, shownCount) {
+            if (totalCount === 0) return 'Nessun risultato';
+            if (totalCount > shownCount) return `Primi ${shownCount} di ${totalCount} risultati: affina la ricerca`;
+            return `${totalCount} ${totalCount === 1 ? 'risultato' : 'risultati'}`;
+        }
+
+        function renderResults() {
+            if (!atecoData) return;
+            const query = searchInput.value.trim();
+            if (!query && activeFilter === ALL_FILTER) {
+                resultSummary.textContent = '';
+                resultList.replaceChildren();
+                return;
+            }
+            const source = query ? searchByText(atecoData, query) : atecoData.ateco_codes;
+            const matches = source.filter(matchesActiveFilter);
+            const shown = matches.slice(0, MAX_DISPLAYED_RESULTS);
+            resultSummary.textContent = describeResultCount(matches.length, shown.length);
+            resultList.replaceChildren(...shown.map(renderResult));
+        }
+
+        function selectFilter(button) {
+            activeFilter = button.dataset.filter;
+            filterButtons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+            renderResults();
+        }
+
+        async function loadDataset() {
+            const response = await fetch('./ateco_codes_with_profitability.json');
+            atecoData = await response.json();
+            codesByCode = new Map(atecoData.ateco_codes.map(item => [item.code, item]));
+            document.getElementById('totalCodes').textContent = atecoData.ateco_codes.length.toLocaleString('it-IT');
+            renderResults();
+        }
+
+        applyStoredTheme();
+        document.querySelector('.theme-toggle').addEventListener('click', toggleTheme);
+
+        document.getElementById('curlExample').textContent =
+`$ curl ${new URL('./api/code/62.10.00.json', location.href).href}
+{
+  "code": "62.10.00",
+  "title_it": "Attività di programmazione informatica",
+  "hierarchy": 6,
+  "parent_code": "62.10.0",
+  "profitability_coefficient": 0.67,
+  "profitability_candidates": [0.67],
+  ...
+}`;
+
+        searchInput.addEventListener('input', renderResults);
+        filterButtons.forEach(button => button.addEventListener('click', () => selectFilter(button)));
+        document.addEventListener('keydown', event => {
+            if (event.key === '/' && document.activeElement !== searchInput) {
+                event.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        loadDataset();
+    </script>
+</body>
+</html>
