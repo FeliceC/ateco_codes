@@ -1,6 +1,6 @@
 {
   "name": "ateco-codes-api",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "ATECO 2025 Codes API with Profitability Coefficients - Deployed on GitHub Pages",
   "main": "api.js",
   "scripts": {
@@ -13,7 +13,14 @@
   "devDependencies": {
     "jest": "^29.7.0"
   },
-  "keywords": ["ateco", "api", "italy", "business", "profitability", "github-pages"],
+  "keywords": [
+    "ateco",
+    "api",
+    "italy",
+    "business",
+    "profitability",
+    "github-pages"
+  ],
   "author": "Felice Caricati",
   "license": "MIT",
   "repository": {
